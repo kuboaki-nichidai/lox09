@@ -24,7 +24,7 @@
 
 :toc:
 
-= lox09_a
+= lox09
 
 コンパイラ、第9,10回の講義用Assignmentです。
 
@@ -262,3 +262,228 @@ include::{sourcesdir}/expression01.bnf[]
 --
 
 == 構文木を実装する -- 5.2
+
+
+[NOTE]
+--
+この演習でコードを作成する際には、これまで作成した lox01 Assignmentの中のコードに追加する。
+--
+
+=== Loxの式の要素用のJavaソースコードを生成する -- 5.2.2
+
+Loxの式の要素ごとにそれらを木の要素にするためのクラスを用意する。
+しかし、似たようなクラスを21個も手作業でつくるのは馬鹿げている。
+
+そこで、 `GenerateAst` クラスを使って、これらのクラスのJavaファイルを生成する（作成しているインタプリタの一部ではないことに注意）。
+
+たとえば、 `"Binary : Expr left, Token operator, Expr right"` のような文字列から、 `Expr.java` の中に次のようなコードを生成する。
+
+[source,java]
+.Expr.java
+----
+  static class Binary extends Expr {
+    Binary(Expr left, Token operator, Expr right) {
+      this.left = left;
+      this.operator = operator;
+      this.right = right;
+    }
+
+   final Expr left;
+    final Token operator;
+    final Expr right;
+  }
+----
+
+=== 演習：コードを生成するプログラムを作成する
+
+テキストの5.2.2を読みながら、「lox01」リポジトリで `GenerateAst.java` を作成しなさい。
+
+. `com\craftinginterpreters\lox` の並びに `tool` ディレクトリを作りなさい（MSYS2やGit Bashのターミナルなら区切りは `/` に読み替える）。
+** 次のようなコマンドで、 `craftinginterpreters` ディレクトリの中に `tool` ディレクトリを作る。
+** `mkdir com\craftinginterpreters\tool`
+. 作成した `tool` ディレクトリに `GenerateAst.java` を作成しなさい。
+. テキストの5.2.2を参照して、`GenerateAst.java` にコードを追加しなさい。
+** import文の追加、 `GenerateAst` クラスの追加。
+** `main` メソッドに `defineAst` メソッドの呼び出しの追加。
+** 上記の呼び出しにおけるパラメータが、生成するコードに使うクラスやメンバ変数の元になっていることを確認しなさい。
+** `defineAst` メソッドの追加。
+** `defineAst` メソッドに、クラスの定義の生成コードを追加。
+** `defineType` メソッドの追加。
+
+作成できたら、コンパイルしなしさい。
+
+[souece,console]
+----
+# java ディレクトリ（中にcomディレクトリがある場所）に移動する
+# dir（もしくはls）コマンドで中に com ディレクトリがあることを確認する
+javac com/craftinginterpreters/tool/GenerateAst.java
+----
+
+コンパイルできたら、実行しなさい。
+
+初めて実行するときは、出力ディレクトリに実害のない場所を指定して実行し、 `Expr.java` が期待通り生成できているか確認しなさい。
+
+[souece,console]
+----
+# java ディレクトリ（comディレクトリがある場所）で
+java com.craftinginterpreters.tool.GenerateAst <出力先ディレクトリ>
+----
+
+次に、出力先を、`com\craftinginterpreters\lox` になるよう調整して実行しなさい。
+
+
+[souece,console]
+.コマンドプロンプトの場合
+----
+# java ディレクトリ（comディレクトリがある場所）で
+java com.craftinginterpreters.tool.GenerateAst com\craftinginterpreters\lox
+----
+
+[souece,console]
+.MSYS2やGit Bashの場合
+----
+# java ディレクトリ（comディレクトリがある場所）で
+java com.craftinginterpreters.tool.GenerateAst com/craftinginterpreters/lox
+----
+
+実行後に、 `lox` ディレクトリに `Expr.java` が作成されていること、内容が期待通りのものかを確認する。
+
+. 作成できたら、「lox01」リポジトリをコミットしなさい。
+** まずは、 status を確認する。
+** コミットメッセージは「add GenerateAst.java, generate Expr.java」などでよいでしょう。
+** 忘れそうなら、「lox01」をプッシュしておいてもよい。
+
+
+== 構文木を使う -- 5.3
+
+式を扱うには、式の要素ごとの型を扱う必要がある。
+
+式の要素は多様（Binary, Unary, ... etc.）なので、これらに対応する型も多様になる。
+これらに、新しい型を追加するのは容易だが（継承すればよい）、すべての型にメソッドの実装を追加するのは手間がかかる。
+
+
+=== Visitorパターン -- 5.3.2
+
+
+テキストの5.3.2を通読して、Visitorパターンの概要を把握しなさい。
+
+`Expr.java` に次のようなコードを追加して、Visitorパターンを利用できるようにしたい。
+
+[source,java]
+.Expr.java（Visitorの追加）
+----
+abstract class Expr {
+  interface Visitor<R> {
+    R visitBinaryExpr(Binary expr);
+    // ...
+  }
+
+  static class Binary extends Expr {
+    Binary(Expr left, Token operator, Expr right) {
+      // ...
+    }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+      return visitor.visitBinaryExpr(this);
+    }
+
+    final Expr left;
+    // ...
+  }
+
+  abstract <R> R accept(Visitor<R> visitor);
+}
+----
+
+=== 演習：Visitorを式の処理に追加する -- 5.3.3
+
+テキストの5.3.3を読みながら、「lox01」リポジトリに、Visitorパターンを適用するコードを追加しなさい。
+
+. `GenerateAst.java` を開く。
+. `defineAst` メソッドに `defineVisitor` の呼び出しを追加する。
+** それぞれの型用のvisitメソッドが並ぶinterfaceを作成している。
+. `defineAst` メソッドの後に `defineVisitor` メソッドを定義する。
+** すべての型についてそれぞれの `visit` メソッドを作成している。
+. `defineAst` メソッドの末尾に基底クラスの `accept` メソッドを追加する。
+. 生成されるクラスのフィールド定義の前に `accept` メソッドを追加する。
+** これは基底クラス（ここでは `Expr` クラス）の `accept` メソッドをオーバーライドしている。
+
+
+. 作成できたら、「lox01」リポジトリをコミットしなさい。
+** まずは、 status を確認する。
+** コミットメッセージは「modify GenerateAst.java for visitor」などでよいでしょう。
+** 忘れそうなら、「lox01」プッシュしておいてもよい。
+
+=== 演習：構文木の可視化
+
+次のサイトは、構文木の可視化を試すことができる。
+JavaScriptの式で、数値と四則演算とカッコを使ったものが試せる。
+変数は使えない。グループのカッコは書くことはできるが、できあがる図は適用後のツリー（カッコのないツリー）になる。
+
+JavaScriptの構文木を可視化するツールのウェブサイト:: http://nhiro.org/learn_language/AST-Visualization-on-browser.html
+
+. 0から9までの数字を使った1桁または2桁の整数と四則演算とカッコを使った式を考えなさい。
+** 4つの演算子をそれぞれ必ず1回は使い、カッコも必ず使うこと。
+. その式を上記のサイトに入力して、JSONと図の表示を得なさい。
+. `codes` ディレクトリにある `ast.json` を、上記サイトで得たJSONコードで置き換えなさい。
+. `images` ディレクトリにある `ast.png` を、上記サイトで得た図の部分をpngで保存したもので置き換えなさい。
+** 画像を右クリックしてブラウザのポップアップメニューから「別名で保存する」などを使ってファイルに保存できる。
+
+[source,json]
+.ast.json（保存したもので置き換わる）
+----
+include::{sourcesdir}/ast.json[]
+----
+
+.ast.png（保存したもので置き換わる）
+image::ast.png[]
+
+. 作成できたら、このリポジトリをコミットしなさい。
+** まずは、 status を確認する。
+** コミットメッセージは「replace ast.json, ast.png」などでよいでしょう。
+** 忘れそうなら、このリポジトリをプッシュしておいてもよい。
+
+
+
+=== 演習：プリティプリンタ -- 5.4
+
+生成した構文木を視覚的に把握するためのプログラムを作る。
+テキストの5.4を読みながら、「lox01」リポジトリに、プリティプリンタ用のコードを追加しなさい。
+
+. `lox` ディレクトリに `AstPrinter.java` を作成する。
+. `AstPrinter` クラスを定義する。
+. `print` メソッドを追加する。
+. `print` メソッドの後に、これまでに作った式の要素用の型のためのvisitメソッドを追加する。
+. 追加したvisitメソッドの後に、 `parenthesize` メソッドを追加する。
+. 追加した `parenthesize` メソッドの後に、 `main` メソッドを追加する。
+
+
+作成できたら、コンパイルしなしさい。
+
+[souece,console]
+----
+# java ディレクトリ（中にcomディレクトリがある場所）に移動する
+# dir（もしくはls）コマンドで中に com ディレクトリがあることを確認する
+javac com/craftinginterpreters/lox/*.java
+----
+
+コンパイルできたら、実行しなさい。
+
+[souece,console]
+----
+# java ディレクトリ（comディレクトリがある場所）で
+java com.craftinginterpreters.lox.AstPrinter
+
+(* (- 123) (group 45.67))
+----
+
+. 作成できたら、「lox01」リポジトリをコミットしなさい。
+** まずは、 status を確認する。
+** コミットメッセージは「add AstPrinter.java」などでよいでしょう。
+
+
+[IMPORTANT]
+--
+ここまでの演習結果について、「lox01」「lox09」ともにコミットとプッシュを確認しておく。
+--
