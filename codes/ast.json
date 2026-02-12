@@ -5,37 +5,21 @@
    "type": "ExpressionStatement",
    "expression": {
     "type": "BinaryExpression",
-    "operator": "/",
+    "operator": "+",
     "left": {
+     "type": "Literal",
+     "value": 1
+    },
+    "right": {
      "type": "BinaryExpression",
      "operator": "*",
      "left": {
       "type": "Literal",
-      "value": 32
+      "value": 2
      },
      "right": {
       "type": "Literal",
-      "value": 4
-     }
-    },
-    "right": {
-     "type": "BinaryExpression",
-     "operator": "/",
-     "left": {
-      "type": "BinaryExpression",
-      "operator": "*",
-      "left": {
-       "type": "Literal",
-       "value": 25
-      },
-      "right": {
-       "type": "Literal",
-       "value": 4
-      }
-     },
-     "right": {
-      "type": "Literal",
-      "value": 20
+      "value": 3
      }
     }
    }
